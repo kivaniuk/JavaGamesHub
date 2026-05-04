@@ -11,6 +11,7 @@ public class GameFrame extends JFrame
     private GameSelectPanel gameSelectPanel;
     private SnakeGamePanel snakeGamePanel;
     private BreakoutGamePanel breakoutGamePanel;
+    private AdminPanel adminPanel;
 
 
 
@@ -33,6 +34,7 @@ public class GameFrame extends JFrame
         gamePanel = new GamePanel(session,this);
         snakeGamePanel = new SnakeGamePanel(session,this);
         breakoutGamePanel = new BreakoutGamePanel(session,this);
+        adminPanel = new AdminPanel(session,this);
 
 
         mainPanel.add(loginPanel,"LOGIN");
@@ -42,6 +44,7 @@ public class GameFrame extends JFrame
         mainPanel.add(gamePanel,"GAME");
         mainPanel.add(snakeGamePanel,"SNAKE");
         mainPanel.add(breakoutGamePanel,"BREAKOUT");
+        mainPanel.add(adminPanel,"ADMIN");
 
         add(mainPanel);
         setVisible(true);
@@ -69,6 +72,11 @@ public class GameFrame extends JFrame
     public GameSelectPanel getGameSelectPanel()
     {
         return gameSelectPanel;
+    }
+
+    public AdminPanel getAdminPanel()
+    {
+        return adminPanel;
     }
 
 

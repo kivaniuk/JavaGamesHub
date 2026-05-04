@@ -7,7 +7,6 @@ import java.util.Random;
 
 public class BreakoutGamePanel extends JPanel implements KeyListener
 {
-    // game constants
     private static final int PADDLE_WIDTH = 100;
     private static final int PADDLE_HEIGHT = 12;
     private static final int BALL_SIZE = 12;
@@ -20,23 +19,14 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
 
     private Session session;
     private GameFrame frame;
-
-    // paddle
     private int paddleX, paddleY;
     private int paddleWidth = PADDLE_WIDTH;
     private boolean moveLeft, moveRight;
-
-    // balls
     private ArrayList<Ball> balls;
-
-    // bricks
     private Brick[][] bricks;
     private int brickWidth;
-
-    // boosters
     private ArrayList<Booster> boosters;
 
-    // game state
     private boolean gameRunning, gameOver, gameWon, paused;
     private int score, highScore, lives;
     private int widePaddleTicks = 0;
@@ -44,7 +34,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
     private javax.swing.Timer gameTimer;
     private Random random = new Random();
 
-    // brick colors per row
     private static final Color[] ROW_COLORS = {
             new Color(220, 50, 50),
             new Color(220, 130, 50),
@@ -54,7 +43,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
             new Color(150, 50, 220)
     };
 
-    // booster types
     private static final String BOOSTER_WIDE = "WIDE";
     private static final String BOOSTER_MULTIBALL = "MULTIBALL";
     private static final String BOOSTER_LIFE = "LIFE";
@@ -85,7 +73,7 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
 
         balls = new ArrayList<>();
         boosters = new ArrayList<>();
-        gameTimer = new javax.swing.Timer(16, e -> gameStep()); // ~60fps
+        gameTimer = new javax.swing.Timer(16, e -> gameStep());
     }
 
     public void startGame()
@@ -137,7 +125,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
                 brick.y = TOP_OFFSET + row * (BRICK_HEIGHT + BRICK_GAP);
                 brick.color = ROW_COLORS[row];
                 brick.alive = true;
-                // top 2 rows take 2 hits
                 brick.hitsLeft = (row < 2) ? 2 : 1;
                 bricks[row][col] = brick;
             }
@@ -154,14 +141,12 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
     {
         if (!gameRunning || paused) return;
 
-        // move paddle
         int paddleSpeed = 7;
         if (moveLeft && paddleX > 0)
             paddleX -= paddleSpeed;
         if (moveRight && paddleX + paddleWidth < getWidth())
             paddleX += paddleSpeed;
 
-        // tick wide paddle
         if (widePaddleTicks > 0)
         {
             widePaddleTicks--;
@@ -169,7 +154,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
                 paddleWidth = PADDLE_WIDTH;
         }
 
-        // move balls
         Iterator<Ball> ballIt = balls.iterator();
         while (ballIt.hasNext())
         {
@@ -177,31 +161,26 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
             ball.x += ball.dx;
             ball.y += ball.dy;
 
-            // wall bounce
             if (ball.x <= 0) { ball.x = 0; ball.dx = Math.abs(ball.dx); }
             if (ball.x + BALL_SIZE >= getWidth()) { ball.x = getWidth() - BALL_SIZE; ball.dx = -Math.abs(ball.dx); }
             if (ball.y <= TOP_OFFSET - 40) { ball.y = TOP_OFFSET - 40; ball.dy = Math.abs(ball.dy); }
 
-            // paddle bounce
             Rectangle paddleRect = new Rectangle(paddleX, paddleY, paddleWidth, PADDLE_HEIGHT);
             Rectangle ballRect = new Rectangle(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
             if (ballRect.intersects(paddleRect) && ball.dy > 0)
             {
                 ball.dy = -Math.abs(ball.dy);
-                // angle based on where ball hits paddle
                 int hitPos = (ball.x + BALL_SIZE / 2) - (paddleX + paddleWidth / 2);
                 ball.dx = hitPos / 6;
                 if (ball.dx == 0) ball.dx = 1;
             }
 
-            // ball out of bounds
             if (ball.y > getHeight())
             {
                 ballIt.remove();
                 continue;
             }
 
-            // brick collision
             for (int row = 0; row < BRICK_ROWS; row++)
             {
                 for (int col = 0; col < BRICK_COLS; col++)
@@ -220,7 +199,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
                         maybeSpawnBooster(brick.x + brickWidth / 2, brick.y);
                     }
 
-                    // bounce direction
                     int ballCenterX = ball.x + BALL_SIZE / 2;
                     int ballCenterY = ball.y + BALL_SIZE / 2;
                     int brickCenterX = brick.x + brickWidth / 2;
@@ -239,7 +217,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
             }
         }
 
-        // if all balls lost
         if (balls.isEmpty())
         {
             lives--;
@@ -254,7 +231,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
             }
         }
 
-        // move boosters
         Iterator<Booster> boostIt = boosters.iterator();
         while (boostIt.hasNext())
         {
@@ -275,7 +251,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
             }
         }
 
-        // check win
         if (allBricksCleared())
             endGame(true);
 
@@ -292,7 +267,7 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
 
     private void maybeSpawnBooster(int x, int y)
     {
-        if (random.nextInt(5) != 0) return; // 20% chance
+        if (random.nextInt(5) != 0) return;
 
         Booster b = new Booster();
         b.x = x;
@@ -310,7 +285,7 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
         {
             case BOOSTER_WIDE:
                 paddleWidth = PADDLE_WIDTH * 2;
-                widePaddleTicks = 600; // ~10 seconds at 60fps
+                widePaddleTicks = 600;
                 break;
             case BOOSTER_MULTIBALL:
                 if (!balls.isEmpty())
@@ -340,10 +315,8 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
         if (score > highScore)
         {
             highScore = score;
-            session.updateBreakoutHighScore(score);
         }
-        session.addXP(won ? 4 : 2);
-        session.incrementGameCount(false);
+        session.completeGameSession(2,score,0,won ? 4 : 2);
         repaint();
     }
 
@@ -354,7 +327,7 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // background
+
         g2.setColor(new Color(15, 15, 25));
         g2.fillRect(0, 0, getWidth(), getHeight());
 
@@ -362,15 +335,13 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
 
         if (!gameRunning && !gameOver) return;
 
-        // bricks
+
         for (int row = 0; row < BRICK_ROWS; row++)
         {
             for (int col = 0; col < BRICK_COLS; col++)
             {
                 Brick brick = bricks[row][col];
                 if (!brick.alive) continue;
-
-                // cracked bricks are darker
                 Color c = brick.hitsLeft == 2 ? brick.color : brick.color.darker();
                 g2.setColor(c);
                 g2.fillRoundRect(brick.x, brick.y, brickWidth, BRICK_HEIGHT, 6, 6);
@@ -380,7 +351,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
             }
         }
 
-        // paddle
         g2.setColor(new Color(200, 200, 255));
         g2.fillRoundRect(paddleX, paddleY, paddleWidth, PADDLE_HEIGHT, 8, 8);
         if (widePaddleTicks > 0)
@@ -389,7 +359,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
             g2.fillRoundRect(paddleX, paddleY, paddleWidth, PADDLE_HEIGHT, 8, 8);
         }
 
-        // balls
         for (Ball ball : balls)
         {
             g2.setColor(Color.WHITE);
@@ -399,7 +368,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
             g2.drawOval(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
         }
 
-        // boosters
         for (Booster b : boosters)
         {
             g2.setColor(b.color);
@@ -410,7 +378,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
             g2.drawString(b.label, b.x - fm.stringWidth(b.label) / 2, b.y + fm.getAscent() / 2 - 2);
         }
 
-        // wide paddle timer bar
         if (widePaddleTicks > 0)
         {
             int barWidth = (int)((widePaddleTicks / 600.0) * 150);
@@ -442,7 +409,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
         g2.setColor(new Color(255, 220, 50));
         g2.drawString("Best: " + highScore, getWidth() / 2 + 80, 35);
 
-        // lives as hearts
         g2.setFont(new Font("Tahoma", Font.BOLD, 16));
         g2.setColor(new Color(255, 80, 80));
         StringBuilder hearts = new StringBuilder();
@@ -524,7 +490,6 @@ public class BreakoutGamePanel extends JPanel implements KeyListener
         highScore = session.getBreakoutHighScore();
     }
 
-    // inner classes
     static class Ball
     {
         int x, y, dx, dy;

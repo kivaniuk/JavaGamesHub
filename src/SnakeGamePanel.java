@@ -300,10 +300,8 @@ public class SnakeGamePanel extends JPanel implements KeyListener {
 
         if (score > highScore) {
             highScore = score;
-            session.updateSnakeHighScore(score);
         }
-        session.addXP(score > 0 ? 2 : 1);
-        session.incrementGameCount(true);
+        session.completeGameSession(1,score,0, score > 0 ? 2 : 1);
         repaint();
     }
 

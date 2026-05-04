@@ -97,8 +97,17 @@ public class LoginPanel extends JPanel
             if (session.login(enteredUsername, enteredPin))
             {
                 loginAttempts = 0;
-                frame.getMenuPanel().refresh(session);
-                frame.showScreen("MENU");
+                if (session.isAdmin())
+                {
+                    frame.getAdminPanel().refresh(session);
+                    frame.showScreen("ADMIN");
+                }
+                else
+                {
+                    frame.getMenuPanel().refresh(session);
+                    frame.showScreen("MENU");
+                }
+
             }
             else
             {

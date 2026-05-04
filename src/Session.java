@@ -1,3 +1,5 @@
+import java.sql.ResultSet;
+
 public class Session
 {
     private Database database;
@@ -23,16 +25,6 @@ public class Session
         return false;
     }
 
-    public String[] getUserScores()
-    {
-        return  database.getUserScores(loggedInUsername);
-    }
-
-    public void incrementGameCount(boolean isSnake)
-    {
-        database.incrementGameCount(loggedInUsername, isSnake);
-    }
-
     public boolean register(String username, String pin, String securityQuestion, String securityAnswer)
     {
         if (database.userExists(username))
@@ -43,16 +35,6 @@ public class Session
         return database.createUser(username, pin, securityQuestion, securityAnswer);
     }
 
-    public int getUserXP()
-    {
-        String[] user = database.getUser(loggedInUsername);
-        if (user != null)
-        {
-            return Integer.parseInt(user[4]);
-        }
-        return 0;
-    }
-
     public String getProfilePic()
     {
         String[] user = database.getUser(loggedInUsername);
@@ -61,11 +43,6 @@ public class Session
             return user[5];
         }
         return "avatar1.jpg";
-    }
-
-    public void addXP(int amount)
-    {
-        database.updateXP(loggedInUsername, getUserXP() + amount);
     }
 
     public void updateProfilePic(String filename)
@@ -81,6 +58,11 @@ public class Session
     public String getLoggedInUsername()
     {
         return loggedInUsername;
+    }
+
+    public int getUserXP()
+    {
+        return database.getUserXP(loggedInUsername);
     }
 
     public String getSecurityQuestion(String username)
@@ -103,15 +85,31 @@ public class Session
         return false;
     }
 
-    public int getBreakoutHighScore()
+    public String[] getUserStats()
     {
-        return database.getBreakoutHighScore(loggedInUsername);
+        return database.getUserStats(loggedInUsername);
     }
 
-    public void updateBreakoutHighScore(int score)
+    public void completeGameSession(int gameId, int score,int durationSeconds,int xpEarned)
     {
-        database.updateBreakoutHighScore(loggedInUsername, score);
+        database.completeGameSession(loggedInUsername, gameId,score,durationSeconds,xpEarned,0,0,0,0);
     }
+
+    public boolean isAdmin()
+    {
+        String[] user = database.getUser(loggedInUsername);
+        if (user != null)
+        {
+            return user[4].equals("admin");
+        }
+        return false;
+    }
+
+    public int getBreakoutHighScore()
+    {
+        return database.getHighScore(loggedInUsername,2);
+    }
+
     public String getPinForRecovery(String username)
     {
         String[] user = database.getUser(username);
@@ -129,12 +127,24 @@ public class Session
 
     public int getSnakeHighScore()
     {
-        return database.getSnakeHighScore(loggedInUsername);
+        return database.getHighScore(loggedInUsername,1);
     }
 
-    public void  updateSnakeHighScore(int score)
+    public ResultSet getAllUsers()
     {
-        database.updateSnakeHighScore(loggedInUsername, score);
+        return database.getAllUsers();
     }
+
+    public ResultSet generateWeeklyReport(String weekStart)
+    {
+        return database.generateWeeklyReport(weekStart);
+    }
+
+    public void setUserActive(int userID, boolean active)
+    {
+        database.setUserActive(userID,active);
+    }
+
+
 
 }

@@ -24,7 +24,7 @@ public class Database
     {
         try
         {
-            String query = "SELECT username, pin, security_question, security_answer, xp, profile_picture FROM users WHERE username = ?";
+            String query = "SELECT username, pin, security_question, security_answer, user_role, profile_picture FROM users WHERE username = ?";
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setString(1,username);
             ResultSet rs = statement.executeQuery();
@@ -36,7 +36,7 @@ public class Database
                 user[1] = rs.getString("pin");
                 user[2] = rs.getString("security_question");
                 user[3] = rs.getString("security_answer");
-                user[4] =rs.getString("xp");
+                user[4] =rs.getString("user_role");
                 user[5] = rs.getString("profile_picture");
                 return user;
             }
@@ -52,7 +52,7 @@ public class Database
     {
         try
         {
-            String query = "SELECT id FROM users WHERE username = ?";
+            String query = "SELECT user_id FROM users WHERE username = ?";
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setString(1,username);
             ResultSet rs = statement.executeQuery();
@@ -64,23 +64,6 @@ public class Database
         }
         return false;
     }
-
-    public void updateXP(String username, int newXP)
-    {
-        try
-        {
-            String query = "UPDATE users SET xp = ? WHERE username = ?";
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setInt(1, newXP);
-            statement.setString(2,username);
-            statement.executeUpdate();
-        }
-        catch (SQLException e)
-        {
-            System.out.println("Error Updating the XP: " + e.getMessage());
-        }
-    }
-
     public void updateProfilePic(String username, String filename)
     {
         try {
@@ -101,12 +84,22 @@ public class Database
         try
         {
             String query = "INSERT INTO users (username, pin, security_question, security_answer) VALUES (?, ?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(query);
+            PreparedStatement statement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
             statement.setString(1, username);
             statement.setString(2, pin);
             statement.setString(3, securityQuestion);
             statement.setString(4, securityAnswer);
             statement.executeUpdate();
+
+            ResultSet keys = statement.getGeneratedKeys();
+            if (keys.next())
+            {
+                int newUserId = keys.getInt(1);
+                String statsQuery = "INSERT INTO user_stats (user_id, week_start_date, week_end_date) VALUES (?, CURDATE(), CURDATE() + INTERVAL 7 DAY)";
+                PreparedStatement statsStatement = connection.prepareStatement(statsQuery);
+                statsStatement.setInt(1, newUserId);
+                statsStatement.executeUpdate();
+            }
             return true;
         }
         catch (SQLException e)
@@ -116,118 +109,177 @@ public class Database
         return false;
     }
 
-    public int getSnakeHighScore(String username)
+    public int getUserId(String username)
     {
         try
         {
-            String query = "SELECT snake_highscore FROM users WHERE username = ?";
+            String query = "SELECT user_id FROM users WHERE username = ?";
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setString(1,username);
             ResultSet rs = statement.executeQuery();
             if (rs.next())
             {
-                return rs.getInt("snake_highscore");
+                return rs.getInt("user_id");
             }
         }
         catch (SQLException e)
         {
-            System.out.println("Error Getting snake highscore: " + e.getMessage());
+            System.out.println("Error getting user id: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    public int getUserXP(String username)
+    {
+        try
+        {
+            String query = "SELECT us.lifetime_xp FROM user_stats us " +
+                    "JOIN users u ON us.user_id = u.user_id " +
+                    "WHERE u.username = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1,username);
+            ResultSet rs = statement.executeQuery();
+            if (rs.next())
+            {
+                return rs.getInt("lifetime_xp");
+            }
+        }
+        catch (SQLException e)
+        {
+            System.out.println("Error getting user XP: " + e.getMessage());
         }
         return 0;
     }
 
-    public void updateSnakeHighScore(String username,int score)
+    public int getHighScore(String username, int gameID)
     {
         try
         {
-            String query = "UPDATE users SET snake_highscore = ? WHERE username = ?";
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setInt(1,score);
-            statement.setString(2,username);
-            statement.executeUpdate();
-        }
-        catch (SQLException e)
-        {
-            System.out.println("Error Updating the Snake High Score: " + e.getMessage());
-        }
-    }
-
-    public String[]getUserScores(String username)
-    {
-        String[] stats = new String[4];
-
-        try
-        {
-            String query = "SELECT total_games, snake_games, snake_highscore, date_created FROM users WHERE username = ?";
-            PreparedStatement statement = connection.prepareStatement(query);
+            String query = "SELECT hs.score FROM high_scores hs " +
+                    "JOIN users u ON hs.user_id = u.user_id " +
+                    "WHERE u.username = ? AND hs.game_id = ? ";
+            PreparedStatement statement  = connection.prepareStatement(query);
             statement.setString(1,username);
+            statement.setInt(2,gameID);
             ResultSet rs = statement.executeQuery();
-
             if (rs.next())
             {
-                stats[0] =rs.getString("total_games");
-                stats[1] = rs.getString("snake_games");
-                stats[2] = rs.getString("snake_highscore");
-                stats[3] = rs.getString("date_created");
+                return rs.getInt("score");
             }
-        } catch  (SQLException e)
-        {
-            System.out.println("Error Getting Stats: " + e.getMessage());
         }
-        return stats;
+        catch (SQLException e)
+            {
+            System.out.println("Error getting high score: " + e.getMessage());
+            }
+        return 0;
     }
 
-    public int getBreakoutHighScore(String username)
+    public void completeGameSession(String username, int gameID, int score, int durationSeconds, int xpEarned, int keyPresses, int mouseClicks, int timesPaused, int boostersCollected)
     {
         try
         {
-            String query = "SELECT breakout_highscore FROM users WHERE username = ?";
+            int userID = getUserId(username);
+            if (userID == -1) return;
+            String query = "CALL complete_game_session(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, userID);
+            statement.setInt(2, gameID);
+            statement.setInt(3, score);
+            statement.setInt(4, durationSeconds);
+            statement.setInt(5, xpEarned);
+            statement.setInt(6, keyPresses);
+            statement.setInt(7, mouseClicks);
+            statement.setInt(8, timesPaused);
+            statement.setInt(9, boostersCollected);
+            statement.execute();
+        }
+        catch (SQLException e)
+            {
+            System.out.println("Error completing game session: " + e.getMessage());
+            }
+    }
+
+    public String[] getUserStats(String username)
+    {
+        String[] stats = new String[6];
+        try
+        {
+            String query = "SELECT u.created_at, us.lifetime_xp, us.total_sessions, " +
+                    "us.weekly_xp, us.weekly_sessions, " +
+                    "calculate_level(us.lifetime_xp) AS level, " +
+                    "COALESCE((SELECT score FROM high_scores hs WHERE hs.user_id = u.user_id AND hs.game_id = 1), 0) AS snake_best, " +
+                    "COALESCE((SELECT score FROM high_scores hs WHERE hs.user_id = u.user_id AND hs.game_id = 2), 0) AS breakout_best " +
+                    "FROM users u JOIN user_stats us ON u.user_id = us.user_id " +
+                    "WHERE u.username = ?";
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setString(1, username);
             ResultSet rs = statement.executeQuery();
             if (rs.next())
-                return rs.getInt("breakout_highscore");
+            {
+                stats[0] = rs.getString("lifetime_xp");
+                stats[1] = rs.getString("total_sessions");
+                stats[2] = rs.getString("snake_best");
+                stats[3] = rs.getString("breakout_best");
+                stats[4] =  rs.getString("created_at");
+                stats[5] = rs.getString("level");
+            }
         }
         catch (SQLException e)
-        {
-            System.out.println("Error getting breakout high score: " + e.getMessage());
-        }
-        return 0;
+            {
+            System.out.println("Error getting user stats: " + e.getMessage());
+            }
+        return stats;
     }
 
-
-
-    public void updateBreakoutHighScore(String username, int score)
+    public ResultSet generateWeeklyReport(String weekStart)
     {
         try
         {
-            String query = "UPDATE users SET breakout_highscore = ? WHERE username = ?";
+            String query = "CALL generate_weekly_report(?)";
             PreparedStatement statement = connection.prepareStatement(query);
-            statement.setInt(1, score);
-            statement.setString(2, username);
-            statement.executeUpdate();
+            statement.setString(1, weekStart);
+            return statement.executeQuery();
         }
         catch (SQLException e)
-        {
-            System.out.println("Error updating breakout high score: " + e.getMessage());
-        }
+            {
+            System.out.println("Error generating weekly report: " + e.getMessage());
+            }
+        return null;
     }
 
-    public void incrementGameCount(String username, boolean isSnake)
+    public ResultSet getAllUsers()
     {
         try
         {
-            String query = "UPDATE users SET total_games = total_games + 1" +
-                    (isSnake ? ", snake_games = snake_games + 1 " : " ") +
-                    "WHERE username = ?";
+            String query = "SELECT u.user_id, u.username, u.user_role, u.is_active, " +
+                    "u.created_at, us.lifetime_xp, us.total_sessions, " +
+                    "calculate_level(us.lifetime_xp) AS level " +
+                    "FROM users u JOIN user_stats us ON u.user_id = us.user_id " +
+                    "ORDER BY us.lifetime_xp DESC";
             PreparedStatement statement = connection.prepareStatement(query);
-            statement.setString(1,username);
+            return statement.executeQuery();
+        }
+        catch (SQLException e)
+            {
+            System.out.println("Error getting all users: " + e.getMessage());
+            }
+        return null;
+    }
+
+    public void setUserActive(int userId, boolean active)
+    {
+        try
+        {
+            String query = "UPDATE users SET is_active = ? WHERE user_id = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, active ? 1 : 0);
+            statement.setInt(2,userId);
             statement.executeUpdate();
         }
         catch (SQLException e)
-        {
-            System.out.println("Error Incrementing Game Count: " + e.getMessage());
-        }
+            {
+            System.out.println("Error updating user status: " + e.getMessage());
+            }
     }
 
     public void closeConnection()

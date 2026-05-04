@@ -7,6 +7,8 @@ public class StatsPanel extends JPanel
     private JLabel snakeGamesLabel;
     private JLabel snakeScoreLabel;
     private JLabel dateCreatedLabel;
+    private JLabel breakoutGamesLabel;
+    private JLabel breakoutGamesScoreLabel;
     private Image backgroundImage;
 
     public StatsPanel(Session session, GameFrame frame)
@@ -17,6 +19,9 @@ public class StatsPanel extends JPanel
         snakeGamesLabel = new JLabel("Snake Games: 0");
         snakeScoreLabel = new JLabel("Snake Record: 0");
         dateCreatedLabel = new JLabel("Member since: -");
+        breakoutGamesLabel = new JLabel("Breakout games: 0");
+        breakoutGamesScoreLabel = new JLabel("Breakout Record: 0");
+
         dateCreatedLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel titleLabel = new JLabel("Stats Panel");
@@ -46,6 +51,10 @@ public class StatsPanel extends JPanel
         add(Box.createVerticalStrut(10));
         add(snakeScoreLabel);
         add(Box.createVerticalStrut(20));
+        add(breakoutGamesLabel);
+        add(Box.createVerticalStrut(10));
+        add(breakoutGamesScoreLabel);
+        add(Box.createVerticalStrut(10));
         add(backButton);
         add(Box.createVerticalGlue());
 
@@ -68,20 +77,28 @@ public class StatsPanel extends JPanel
 
     public void refresh(Session session)
     {
-        String[]stats =session.getUserScores();
+        String[]stats =session.getUserStats();
         if(stats!=null && stats[0] != null)
         {
-            totalGamesLabel.setText("Total games played: " + stats[0]);
-            snakeGamesLabel.setText("Snake games: " + stats[1]);
+            totalGamesLabel.setText("Lifetime XP: " + stats[0]);
+            snakeGamesLabel.setText("Total Sessions: " + stats[1]);
             snakeScoreLabel.setText("Snake Record: " + stats[2]);
-            dateCreatedLabel.setText("Member since: " + stats[3]);
+            breakoutGamesScoreLabel.setText("Breakout Record: " + stats[3]);
+            dateCreatedLabel.setText("Member since: " + stats[4]);
+            breakoutGamesLabel.setText("level: " + stats[5]);
+
+
+
 
         }
         else
         {
-            totalGamesLabel.setText("Total games played: 0");
-            snakeGamesLabel.setText("Snake games: 0");
+            totalGamesLabel.setText("Lifetime Xp: 0");
+            snakeGamesLabel.setText("Total Sessions: 0");
             snakeScoreLabel.setText("Snake Record: 0");
+            breakoutGamesScoreLabel.setText("Breakout Record: 0");
+            dateCreatedLabel.setText("Member since: -");
+            breakoutGamesLabel.setText("Level: 0");
         }
     }
 
